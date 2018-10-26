@@ -1,0 +1,1846 @@
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(case-fold-search t)
+ '(column-number-mode 1)
+ '(comint-completion-addsuffix t)
+ '(comint-completion-autolist t)
+ '(comint-input-ignoredups t)
+ '(comint-move-point-for-output t)
+ '(comint-prompt-read-only t)
+ '(comint-scroll-show-maximum-output t)
+ '(comint-scroll-to-bottom-on-input t)
+ '(current-language-environment "UTF-8")
+ '(default-input-method "rfc1345")
+ '(ediff-split-window-function (quote split-window-vertically) t)
+ '(global-font-lock-mode t nil (font-lock))
+ '(helm-M-x-fuzzy-match t)
+ '(helm-apropos-fuzzy-match t)
+ '(helm-buffers-fuzzy-matching t)
+ '(helm-completion-in-region-fuzzy-match t)
+ '(helm-etags-fuzzy-match t)
+ '(helm-ff-file-name-history-use-recentf t)
+ '(helm-ff-search-library-in-sexp t)
+ '(helm-file-cache-fuzzy-match t)
+ '(helm-imenu-fuzzy-match t)
+ '(helm-lisp-fuzzy-completion t)
+ '(helm-locate-fuzzy-match t)
+ '(helm-mode t)
+ '(helm-mode-fuzzy-match t)
+ '(helm-move-to-line-cycle-in-source t)
+ '(helm-recentf-fuzzy-match t)
+ '(helm-scroll-amount 8)
+ '(helm-split-window-in-side-p t)
+ '(inhibit-startup-screen t)
+ '(isearch-lazy-highlight t)
+ '(p4-global-key-prefix [24 241])
+ '(package-selected-packages
+   (quote
+    (magit helm-descbinds logview helm-flx helm-fuzzier helm-flyspell flycheck-irony helm-company company-irony irony company-c-headers helm-gtags ethan-wspace smartscan powerline helm-mt multi-term popup auto-complete jedi helm-projectile helm fish-mode virtualenv highlight-indent-guides smart-operator cython-mode nose pylint flycheck python-mode visual-ascii-mode p4 zenburn-theme w32-browser undo-tree spinner spacegray-theme solarized-theme smex seq register-list openwith omnisharp occur-x nsis-mode monokai-theme moe-theme mediawiki let-alist json-mode js2-mode iedit fold-dwim flymake-cursor flx-ido flex-isearch dired-filter dired-efap diminish diff-hl cygwin-mount company browse-kill-ring anything-complete anything ack-menu)))
+ '(send-mail-function (quote smtpmail-send-it))
+ '(show-paren-mode t)
+ '(smtpmail-smtp-server "smtp.gmail.com.")
+ '(smtpmail-smtp-service 25))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Startup configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(setq load-path (append load-path (list "~/.emacs.d/lisp")))
+(setq load-path (append load-path (list "~/.emacs.d/lisp/emacs-for-python-master/extensions/")))
+(setq backup-directory-alist '(("" . "~/.emacs.d/emacs-backup")))
+(setq c-hungry-delete-key t)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Cua mode
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(setq cua-enable-cua-keys nil) ;; only for rectangles
+(setq cua-rectangle-mark-key (kbd "C-M-<return>")) ;; Rebind the mark rectangle key
+(cua-mode t)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;      ediff    Usage: emacs --diff file1 file2
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;make ediff operate on selected-frame
+(setq ediff-window-setup-function 'ediff-setup-windows-plain)
+
+;make ediff to be horizontally split
+(setq ediff-split-window-function 'split-window-vertically)
+
+(defun command-line-diff (switch)
+  (let ((file1 (pop command-line-args-left))
+        (file2 (pop command-line-args-left)))
+    (ediff-merge-files file1 file2)))
+
+;; Some custom configuration to ediff
+(defvar my-ediff-bwin-config nil "Window configuration before ediff.")
+(defcustom my-ediff-bwin-reg ?b
+  "*Register to be set up to hold `my-ediff-bwin-config'
+    configuration.")
+
+(defvar my-ediff-awin-config nil "Window configuration after ediff.")
+(defcustom my-ediff-awin-reg ?e
+  "*Register to be used to hold `my-ediff-awin-config' window
+    configuration.")
+
+(defun my-ediff-bsh ()
+  "Function to be called before any buffers or window setup for
+    ediff."
+  (setq my-ediff-bwin-config (current-window-configuration))
+  (setq-default ediff-auto-refine 'off) ;; Hide the auto-refinment (activate by * when needed)
+  (when (symbolp my-ediff-bwin-reg)
+    (set-register my-ediff-bwin-reg
+                  (list my-ediff-bwin-config (point-marker)))))
+
+(defun my-ediff-ash ()
+  "Function to be called after buffers and window setup for ediff."
+  (setq my-ediff-awin-config (current-window-configuration))
+  (when (symbolp my-ediff-awin-reg)
+    (set-register my-ediff-awin-reg
+                  (list my-ediff-awin-config (point-marker)))))
+
+(defun my-ediff-qh ()
+  "Function to be called when ediff quits."
+  (when my-ediff-bwin-config
+    (set-window-configuration my-ediff-bwin-config)))
+
+(add-hook 'ediff-before-setup-hook 'my-ediff-bsh)
+(add-hook 'ediff-after-setup-windows-hook 'my-ediff-ash 'append)
+(add-hook 'ediff-quit-hook 'my-ediff-qh)
+
+(add-to-list 'command-switch-alist '("-diff" . command-line-diff))
+
+(defvar compare-map (lookup-key global-map [?\C-=]))
+(unless (keymapp compare-map)
+  (setq compare-map (make-sparse-keymap))
+  (global-set-key [(control ?=)] compare-map)
+  (define-key compare-map "b" 'ediff-buffers)
+  (define-key compare-map "e" 'ediff-files)
+  (define-key compare-map "f" 'ediff-files)
+  (define-key compare-map "d" 'diff)
+  (define-key compare-map "w" 'compare-windows))
+
+(setq ediff-window-setup-function  'ediff-setup-windows-plain
+      ediff-ignore-similar-regions t
+      ediff-diff-options           " -bB ")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;      Python configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(autoload 'python-mode "python-mode" "Python Mode." t)
+(add-to-list 'auto-mode-alist '("\\.py\\'" . python-mode))
+(add-to-list 'interpreter-mode-alist '("python" . python-mode))
+
+(defun flycheck-python-setup () (flycheck-mode))
+;;(add-hook 'python-mode-hook #'flycheck-python-setup)
+
+(add-hook 'python-mode-hook
+           (lambda ()
+             (set (make-variable-buffer-local 'beginning-of-defun-function) 'py-beginning-of-def-or-class)
+             (setq outline-regexp "def\\|class ")))
+
+(put 'downcase-region 'disabled nil)
+
+;; Autocomplete by using Jedi setup
+(add-hook 'python-mode-hook 'jedi:setup)
+(add-hook 'python-mode-hook '(company-mode 0))
+(setq jedi:complete-on-dot t)
+
+(eval-after-load "python-mode"
+  '(define-key python-mode-map (kbd "C-j") nil))
+
+;; Keybindings
+;;(define-key python-mode-map (kbd "RET") 'newline-and-indent)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;      XML configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(autoload 'nxml-mode "nxml-mode" "XML mode." t)
+(add-to-list 'auto-mode-alist '("\\.xml\\'" . nxml-mode))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;      CC-Mode configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Setting style
+(interactive)
+(c-mode)
+(setq c-default-style "linux")
+(setq-default c-basic-offset 3)
+(setq-default indent-tabs-mode nil)
+(setq default-tab-width 3)
+
+(defun my-c-mode-setup ()
+  (progn
+    (message "C-mode configuration loaded")
+    (c-set-offset 'inline-open 0)
+    (c-set-offset 'statement-cont 0)
+    (c-set-offset 'func-decl-cont 0)
+    (c-set-offset 'topmost-intro-cont 0)
+    (c-set-offset 'topmost-intro 0)
+    (c-set-offset 'statement-case-open 0)
+    (c-set-offset 'substatement-open 0)
+    (c-set-offset 'case-label '+)))
+
+(add-hook 'c-mode-hook 'my-c-mode-setup)
+
+;; Do not indent elements inside a namespace
+(defun my-c++-setup ()
+  (prog
+   (c-set-offset 'innamespace after)
+   (c-set-offset 'innamespace 0)
+   (c-set-offset 'topmost-intro 0)
+   ))
+
+(add-hook 'c++-mode-hook 'my-c++-setup)
+
+
+;; Press 'C-c C-o' to the see the name of the systanx element at the point
+;; for e.g: inline-open, substatement-open, etc ..
+(defun my-csharp-setup ()
+  (progn
+    (c-set-offset 'inline-open 0)
+    (c-set-offset 'inline-open 0)
+    (c-set-offset 'topmost-intro-cont 4)
+    (c-set-offset 'statement-cont 0)
+    (c-set-offset 'case-label 4)
+    (c-set-offset 'statement-case-open 4)
+    (c-set-offset 'substatement-open 0)))
+
+(add-hook 'csharp-mode-hook 'my-csharp-setup)
+
+;; Enable this to use tabs instead of spaces
+;;(setq-default c-basic-offset 4
+;; tab-width 4
+;; indent-tabs-mode t)
+
+;; will let emacs put in a "carriage-return" for you automatically after left curly braces, right
+;; curly braces, and semi-colons in "C mode"
+(setq c-auto-newline 1)
+
+;; autoindentation map C-j to RET
+;;(local-set-key (kbd "RET") 'newline-and-indent)
+
+;; Display current function name
+(add-hook 'c-mode-common-hook
+  (lambda ()
+    (which-function-mode t)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               TAGS Configuartion
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; TAGS file can be created by the following cmd:
+;; find . -regex \".*\.[cChH]\(pp\)?\" -print | etags -
+
+(setq tags-file-name "TAGS")
+;;(setq tags-revert-without-query 1) ;; revert TAGS file when changed without query
+;;load the etags-select.el source code
+(load-library "etags-select.el")
+
+;; TAGS quick browing
+(global-set-key "\M-i" 'etags-select-find-tag-at-point)
+(global-set-key "\C-p" 'pop-tag-mark)
+(global-set-key "\C-n" 'my-find-tag)
+
+;; Search recursively the TAGS file
+(defun jds-find-tags-file ()
+  "recursively searches each parent directory for a file named 'TAGS' and returns the
+path to that file or nil if a tags file is not found. Returns nil if the buffer is
+not visiting a file"
+  (progn
+      (defun find-tags-file-r (path)
+         "find the tags file from the parent directories"
+         (let* ((parent (file-name-directory path))
+                (possible-tags-file (concat parent "TAGS")))
+           (cond
+             ((file-exists-p possible-tags-file) (throw 'found-it possible-tags-file))
+             ((string= "/TAGS" possible-tags-file) (error "no tags file found"))
+             (t (find-tags-file-r (directory-file-name parent))))))
+
+    (if (buffer-file-name)
+        (catch 'found-it
+          (find-tags-file-r (buffer-file-name)))
+        (error "buffer is not visiting a file"))))
+
+(defun jds-set-tags-file-path ()
+  "calls `jds-find-tags-file' to recursively search up the directory tree to find
+a file named 'TAGS'. If found, set 'tags-table-list' with that path as an argument
+otherwise raises an error."
+  (interactive)
+  (setq tags-table-list (list (jds-find-tags-file))))
+
+;; delay search the TAGS file after open the source file
+(add-hook 'emacs-startup-hook
+  '(lambda () (jds-set-tags-file-path)))
+
+;; Don't prompt for the tag-name, use the word on the current cursor position
+(defun my-find-tag ()
+  "My find-tag wrapper for easy repetition (VJO 2003).
+ Call `find-tag' with current word first time and after that call
+ find-tag with NEXT-P set to t (if called repeatedly)"
+  (interactive)
+  (if (eq last-command 'my-find-tag)
+      (find-tag nil t)
+    (progn
+      (find-tag (current-word) current-prefix-arg)
+      (recenter 0)
+      )
+    )
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               CSCOPE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(setq cscope-do-not-update-database t)
+(load-library "xcscope.el")
+(require 'xcscope)
+
+(global-set-key (kbd "C-c o") 'cscope-find-this-text-string)
+(global-set-key (kbd "C-c p d") 'cscope-find-global-definition)
+(global-set-key (kbd "C-c p j") 'cscope-find-this-symbol)
+(global-set-key (kbd "C-c p i") 'cscope-find-this-file)
+(global-set-key (kbd "C-c p f") 'cscope-find-functions-calling-this-function)
+(global-set-key (kbd "C-c s i") 'cscope-find-files-including-file)
+(global-set-key (kbd "C-c u") 'cscope-pop-mark)
+(global-set-key (kbd "C-c C-j") 'uncomment-region)
+(global-set-key (kbd "C-c C-k") 'comment-region)
+(global-set-key [(meta n)] 'cscope-next-symbol)
+(global-set-key [(meta p)] 'cscope-prev-symbol)
+
+(global-set-key (kbd "C-c j") 'my-cscope-find-this-symbol)
+(global-set-key (kbd "C-c d") 'my-cscope-find-global-definition)
+(global-set-key (kbd "C-c i") 'my-cscope-find-this-file)
+(global-set-key (kbd "C-c f") 'my-cscope-find-functions-calling-this-function)
+
+;; Don't prompt for the tag-name, use the word on the current cursor position
+(defun my-cscope-find-this-symbol ()
+  "My find-symbol wrapper for easy repetition (VJO 2003).
+ Call `find-symbol' with current word first time and after that call
+ find-symbol with NEXT-P set to t (if called repeatedly)"
+  (interactive)
+  (if (eq last-command 'my-cscope-find-this-symbol)
+      (cscope-find-this-symbol nil t)
+    (progn
+      (cscope-find-this-symbol (current-word))
+      )
+    )
+  )
+
+;; Don't prompt for the tag-name, use the word on the current cursor position
+(defun my-cscope-find-global-definition ()
+  "My find-symbol wrapper for easy repetition (VJO 2003).
+ Call `find-symbol' with current word first time and after that call
+ find-symbol with NEXT-P set to t (if called repeatedly)"
+  (interactive)
+  (if (eq last-command 'my-cscope-find-global-definition)
+      (cscope-find-global-definition nil t)
+    (progn
+      (cscope-find-global-definition (current-word))
+      )
+    )
+  )
+
+;; Don't prompt for the tag-name, use the word on the current cursor position
+(defun my-cscope-find-this-file ()
+  "My find-symbol wrapper for easy repetition (VJO 2003).
+ Call `find-symbol' with current word first time and after that call
+ find-symbol with NEXT-P set to t (if called repeatedly)"
+  (interactive)
+  (if (eq last-command 'my-cscope-find-this-file)
+      (cscope-find-this-file nil t)
+    (progn
+      (cscope-find-this-file (current-word))
+      )
+    )
+  )
+
+;; Don't prompt for the tag-name, use the word on the current cursor position
+(defun my-cscope-find-functions-calling-this-function ()
+  "My find-symbol wrapper for easy repetition (VJO 2003).
+ Call `find-symbol' with current word first time and after that call
+ find-symbol with NEXT-P set to t (if called repeatedly)"
+  (interactive)
+  (if (eq last-command 'my-cscope-find-functions-calling-this-function)
+      (cscope-find-functions-calling-this-function nil t)
+    (progn
+      (cscope-find-functions-calling-this-function (current-word))
+      )
+    )
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               SVN
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;(require 'psvn)
+(add-hook 'svn-pre-parse-status-hook 'svn-status-parse-fixup-externals-full-path)
+(defun svn-status-parse-fixup-externals-full-path ()
+  "SubVersion 1.17 adds the full path to externals;
+  this pre-parse hook fixes it up to look like pre-1.17.
+  Allowing psvn to continue as normal"
+  (goto-char (point-min))
+  (let (( search-string  (file-truename default-directory) ))
+    (save-match-data
+      (save-excursion
+        (while (re-search-forward search-string (point-max) t)
+          (replace-match "" nil nil)
+          )))))
+
+;; Use ediff to compare with HEAD instead of simple diff when "C-x v =" is called
+(eval-after-load "vc-hooks" '(define-key vc-prefix-map "=" 'vc-ediff))
+
+;; Hidden files by default
+(setq svn-status-hide-unknown 1)
+(setq svn-status-hide-unmodified 1)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;            Interface
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;to set foreground color to black
+;;(set-foreground-color "DarkGrey")
+
+;;to set background color to black
+;;(set-background-color "Black")
+
+;;DejaVu Sans Mono-12, Monaco-12
+(set-default-font "Inconsolata-11")
+(add-to-list 'default-frame-alist '(font . "Inconsolata-13"))
+
+;; remove scrollbar
+
+(global-visual-line-mode 1) ; 1 for on, 0 for off.
+
+(defun global-set-key-f (key command)
+  "Like `global-set-key', but if key has a kp-f define it also without kp."
+  (global-set-key key command)
+  (if (string-match "kp-f" (prin1-to-string key))
+      (global-set-key (read (apply 'concat (split-string (prin1-to-string key) "kp-")))
+                      command)))
+;; deactive tools bar
+(if (featurep 'tool-bar)
+   (tool-bar-mode nil))
+(if (boundp 'blink-cursor-mode)
+   (blink-cursor-mode nil))
+
+;; Only needed sound notifications
+(setq ring-bell-function
+(lambda ()
+ (unless (memq this-command
+             '(isearch-abort abort-recursive-edit exit-minibuffer keyboard-quit))
+  (ding))))
+
+;; Syntax highligting for all supported file types
+(global-font-lock-mode 1)
+
+;; And enable as much highlighting as possible
+(setq font-lock-maximum-decoration t)
+
+;; Only scroll one line when reaching end of page
+(setq scroll-step 1)
+
+;; Make all "yes or no" prompts show "y or n" instead
+(fset 'yes-or-no-p 'y-or-n-p)
+
+;; Show line number
+(setq line-number-mode 1)
+
+;; Show column number
+(setq column-number-mode 1)
+
+;; Disable Ctrl-Z minimization/suspension of emacs.
+(global-set-key [(control z)] nil)
+
+;; Title bar shows name of current buffer.
+(setq frame-title-format '("emacs: %*%+ %b"))
+
+;; highlight brackets
+(require 'paren)
+(show-paren-mode 1)
+
+;; highlight just parens
+(setq show-paren-style 'parenthesis)
+
+;; Meta-up/down to do Page Up and Page Down, as the regular Page Up and
+;; Page down does not repeat, making it tedious to scroll large documents.
+(global-set-key [(meta up)] 'scroll-down)
+(global-set-key [(meta down)] 'scroll-up)
+
+;; Hide the "^M" when processing some buffer that has unix/dos mixture EOLs.
+(defun remove-dos-eol ()
+  "Removes the disturbing '^M' showing up in files containing mixed UNIX and DOS line endings."
+  (interactive)
+  (setq buffer-display-table (make-display-table))
+  (aset buffer-display-table ?\^M []))
+
+;; make sure case is preserved when expanding
+(setq dabbrev-case-replace nil)
+
+;; make sure case is preserved when looking for expansion candidates
+(setq dabbrev-case-fold-search nil)
+
+;; set current buffer's filename, and full path in titlebar
+(setq frame-title-format '("%b" (buffer-file-name ": %f")))
+
+;; It seems that window resizes have to take place after something which is evaluated after
+;; the .emacs, so this did the job for me:
+;;(run-with-idle-timer 0.5 nil 'toggle-frame-fullscreen)
+;;(if (eq system-type 'gnu/linux)
+;;    (progn
+;;      ;; It seems that window resizes have to take place after something which is evaluated after
+;;      ;; the .emacs, so this did the job for me:
+;;      (run-with-idle-timer 0.1 nil 'toggle-frame-fullscreen)
+;;
+;;      (global-set-key [f11] 'toggle-frame-fullscreen)))
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Quick Buffer switching
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(require 'ebs)
+(ebs-initialize)
+(global-set-key [(control tab)] 'ebs-switch-buffer)
+
+(global-set-key (kbd "C-x C-b") 'ibuffer)
+(autoload 'ibuffer "ibuffer" "List buffers." t)
+
+;; switch/toggle to the last visited buffer
+(global-set-key (kbd "C-M-g") 'mode-line-other-buffer)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;              Small functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; UNIX-DOS-UNIX end of line conversions
+(defun dos-unix ()
+  (interactive)
+  (goto-char (point-min))
+  (while (search-forward "\r" nil t) (replace-match "")))
+
+(defun unix-dos ()
+  (interactive)
+  (goto-char (point-min))
+  (while (search-forward "\n" nil t) (replace-match "\r\n")))
+
+
+(setq info-buffers '("*cscope*" "*Occur*" "*grep*" "*etags-select*" "*Output*" "*vc-diff*" "*vc-change-log*" "*Register List*" "* OmniSharp : Usages *" "*Diff*" "*Org Agenda*"))
+
+(defun kill-all-buffers ()
+  (interactive)
+  (mapc 'kill-buffer (buffer-list)))
+
+(defun kill-other-buffers ()
+  "Kill all other buffers."
+  (interactive)
+  (mapc 'kill-buffer
+        (delq (current-buffer)
+              (remove-if-not 'buffer-file-name (buffer-list)))))
+
+(defun kill-info-buffers()
+  (interactive)
+  (save-current-buffer
+    (progn
+      (setq orig-buffer (buffer-name))
+      (let (counter buffers-count)
+        (setq buffers-count (length info-buffers))
+        (setq counter 0)
+
+        (while (< counter buffers-count)
+          (when (get-buffer (nth counter info-buffers))
+            (message "Killing %s" (nth counter info-buffers))
+            (kill-buffer (get-buffer (nth counter info-buffers)))
+            )
+          (setq counter (+ counter 1))
+          )
+        )
+
+      ;; Check whether if we was in the killed buffer in this case move to the
+      ;; the other window and close all the remaining windows, else just close
+      ;; all the windows except the current one
+      (if (member orig-buffer info-buffers)
+          (progn
+            (other-window 1)
+            (delete-other-windows))
+          (delete-other-windows))
+
+    ))
+  )
+
+;;(add-to-list 'load-path "C:\Users\FlcUser/.emacs.d\icicle/")
+;;(require 'icicles)
+;;(icy-mode 1)
+
+;; I-search with initial contents.
+;; original source: http://platypope.org/blog/2007/8/5/a-compendium-of-awesomeness
+(defvar isearch-initial-string nil)
+
+(defun isearch-set-initial-string ()
+  (remove-hook 'isearch-mode-hook 'isearch-set-initial-string)
+  (setq isearch-string isearch-initial-string)
+  (isearch-search-and-update))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  Calendar
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Calendar stuff
+
+(add-hook 'diary-display-hook 'fancy-diary-display)
+(setq calendar-holidays '((holiday-fixed 1 1   "Año nuevo")
+                          (holiday-fixed 1 6   "Reyes Magos")
+                          (holiday-fixed 3 24  "Jueves Santo")
+                          (holiday-fixed 3 25  "Viernes Santo")
+                          (holiday-fixed 5 2   "Dia del Trabajador")
+                          (holiday-fixed 5 3   "Comunidad del Madrid")
+                          (holiday-fixed 7 25  "Santiago")
+                          (holiday-fixed 8 15  "Asunción")
+                          (holiday-fixed 9 9   "Santa Maria Cabeza")
+                          (holiday-fixed 10 12 "Hispanidad")
+                          (holiday-fixed 11 1  "Dia de todos los Santos")
+                          (holiday-fixed 11 9  "Almudena o 2 de Mayo")
+                          (holiday-fixed 12 6  "Constitucion")
+                          (holiday-fixed 12 8  "Inmaculada")
+                          (holiday-fixed 12 25 "Navidad")))
+
+(global-set-key-f [(control kp-f4)] 'calendar)
+
+(font-lock-add-keywords
+ 'calendar-mode
+ '(("[A-Z][a-z]+ [0-9]+" . font-lock-builtin-face) ; month and year
+   ("S.*" . leon-directive-face))                  ; week days
+ 'set)
+
+(add-hook 'initial-calendar-window-hook
+          (lambda ()
+            (font-lock-mode 1)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; File extensions
+
+;; Automatic modes per filename
+
+(mapcar '(lambda(arg) (add-to-list 'auto-mode-alist arg))
+        '(("\\.idl$"       . c-mode)
+          ("\\.xsl$"       . sgml-mode)
+          ("\\.py$"        . python-mode)
+          ("\\.cpp$"       . c++-mode)
+          ("\\.h$"         . c-mode)
+          ("\\.cc$"        . c++-mode)
+          ("\\.hpp$"       . c++-mode)
+          ("\\.org$"       . org-mode)
+          ("\\.js$"        . js2-mode)
+          ("\\.json$"      . json-mode)
+          ("\\.*vxmeta.*$"      . json-mode)
+          ("\\.qml$"       . qml-mode)
+          ("\\.fsm$"       . fsm-mode)
+          ("\\.sc$"        . scenario-mode)
+          ("CHANGES"       . changes-mode)))
+
+(setq completion-ignored-extensions
+        '(".ps" ".o" "~" ".a" ".aux" ".blg" ".bbl" ".elc" ".pyc"
+          "i686" ".lof" ".idx" ".lot" ".dvi" ".toc" ".class"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Searchs
+
+;; In the buffer
+(setq default-case-fold-search  t
+      search-ring-max           64)
+
+(define-key isearch-mode-map [(control t)] 'isearch-toggle-case-fold)
+(define-key isearch-mode-map [(control y)] 'isearch-yank-kill)
+
+(define-key minibuffer-local-isearch-map [(control up)]   'isearch-ring-retreat-edit)
+(define-key isearch-mode-map             [(control up)]   'isearch-ring-retreat)
+(define-key minibuffer-local-isearch-map [(control down)] 'isearch-ring-advance-edit)
+(define-key isearch-mode-map             [(control down)] 'isearch-ring-advance)
+(define-key minibuffer-local-isearch-map [(control t)]    'ignore)
+
+(add-hook 'isearch-mode-end-hook
+          (lambda () (if interprogram-cut-function
+                         (funcall interprogram-cut-function isearch-string))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Copy & Pase stuff
+
+(defun copy-line (&optional arg)
+  "Save current line into Kill-Ring without mark the line "
+  (interactive "P")
+  (let ((beg (line-beginning-position))
+        (end (line-end-position arg)))
+    ;; copy the end-of-line char also (end+1)
+    (copy-region-as-kill beg (+ end 1)))
+  )
+
+(defun copy-paragraph (&optional arg)
+  "Copy paragraphes at point"
+  (interactive "P")
+  (let ((beg (progn (backward-paragraph 1) (point)))
+        (end (progn (forward-paragraph arg) (point))))
+    (copy-region-as-kill beg end))
+  )
+
+(defun copy-kill (action thing)
+  "copy or kill things. action is a symbol, can be 'copy or 'kill. thing is a symbol which specifies the kind of syntactic entity you want.
+Possibilities include `symbol', `list', `sexp', `defun', `filename', `url',
+`email', `word', `sentence', `whitespace', `line', `page' and others.
+ref `bounds-of-thing-at-point'."
+  (interactive)
+  (let ((pos (bounds-of-thing-at-point thing)))
+    (cond ((eq action 'copy) (copy-region-as-kill (car pos) (cdr pos)))
+          ((eq action 'kill) (kill-region (car pos) (cdr pos)))
+          (t (message "wrong action %s" action)))))
+
+;; better than yw function in vim
+(defun copy-symbol ()
+  ;; TODO symbol doesn't allow "." in them, but I want copy-symbol to contain everything except space
+  ;; It could be called copy-word. But in emacs word doesn't contain - / etc. copy-symbol copys the thing between
+  ;; spaces to kill ring."
+  "It could be called copy-word. But in emacs word doesn't contain - / etc."
+  (interactive)
+  (copy-kill 'copy 'symbol))
+
+;; more than y% function in vim
+;; because can copy word when not at (
+(defun copy-sexp ()
+  "copy sexp under point."
+  (interactive)
+  (copy-kill 'copy 'sexp))
+
+(defun my-kill-line ()
+  "kill current line. you don't have to put point at the beginning of line."
+  (interactive)
+  (copy-kill 'kill 'line))
+
+(defun my-kill-symbol ()
+  "kill symbol at point."
+  (interactive)
+  (copy-kill 'kill 'symbol))
+
+(defun my-kill-sexp ()
+  "kill sexp at point. may be no better than default `kill-sexp'. But I can use uniform prefix keys, that's a bonus."
+  (interactive)
+  (copy-kill 'kill 'sexp))
+
+(global-set-key (kbd "M-0") 'my-kill-symbol)
+(global-set-key (kbd "M-s") 'copy-symbol)
+(global-set-key (kbd "M-l") (quote copy-line))
+(global-set-key (kbd "M-k") 'my-kill-line)
+(global-set-key (kbd "M-t") 'helm-imenu)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; kill white-spaces and "enclosed" text functions
+
+(defun kill-whitespace ()
+  "Kill the whitespace between two non-whitespace characters"
+  (interactive "*")
+  (save-excursion
+    (save-restriction
+      (save-match-data
+        (progn
+          (re-search-backward "[^ \t\r\n]" nil t)
+          (re-search-forward "[ \t\r\n]+" nil t)
+          (replace-match "" nil nil))))))
+
+
+;; returns the enclosing character for the character "c"
+(defun get-enc-char (c) (cond
+                         ((string= c "(") ")")
+                         ((string= c "[") "]")
+                         ((string= c "{") "}")
+                         ((string= c ">") "<")
+                         ((string= c "<") ">")
+                         ((string= c "'") "'")
+                         ((string= c "\"") "\"")
+                         (t nil)
+                         )
+  )
+
+(defun delete-enclosed-text ()
+  "Delete texts between any pair of delimiters."
+  (interactive)
+  (save-excursion
+    (let (p1 p2 mychar)
+      ; look for one of those characters and store the cursor position
+      (skip-chars-backward "^([\'\"><{") (setq p1 (point))
+      ; store the char at this point, look for its enclosed char and advance
+      ; the cursor newly (this done to avoid the cases when the char and
+      ; its enclosed-char are the same like " or ' chars.
+      (backward-char 1) (setq mychar (thing-at-point 'char)) (forward-char 1)
+      ; look forward for the enclosed char
+      (skip-chars-forward (concatenate 'string "^" (get-enc-char mychar))) (setq p2 (point))
+      ; only delete the region if we found the enclosed character
+      (if (looking-at "[\]\}\"\'\)<>]") (kill-region p1 p2)))))
+
+(defun kill-whitespace ()
+  "Kill the whitespace between two non-whitespace characters"
+  (interactive "*")
+  (save-excursion
+    (save-restriction
+      (save-match-data
+        (progn
+          (re-search-backward "[^ \t\r\n]" nil t)
+          (re-search-forward "[ \t\r\n]+" nil t)
+          (replace-match "" nil nil))))))
+
+;;(dolist (command '(yank yank-pop))
+;;  (eval `(defadvice ,command (after indent-region activate)
+;;           (and (not current-prefix-arg)
+;;                (member major-mode '(emacs-lisp-mode lisp-mode
+;;                                                     clojure-mode    scheme-mode
+;;                                                     haskell-mode    ruby-mode
+;;                                                     rspec-mode      python-mode
+;;                                                     c-mode          c++-mode
+;;                                                     objc-mode       latex-mode
+;;                                                     plain-tex-mode))
+;;                (let ((mark-even-if-inactive transient-mark-mode))
+;;                  (indent-region (region-beginning) (region-end) nil))))))
+
+(defun kill-and-join-forward (&optional arg)
+  "If at end of line, join with following; otherwise kill line.
+    Deletes whitespace at join."
+  (interactive "P")
+  (if (and (eolp) (not (bolp)))
+      (delete-indentation t)
+    (kill-line arg)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Spell Checking
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(setq ispell-dictionary "english")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Other util functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun h-file-create ()
+  "Create a new h file.  Insert a infdef/define/endif block"
+  (interactive)
+  (if (or (equal (substring (buffer-name (current-buffer)) -2 ) ".h")
+          (equal (substring (buffer-name (current-buffer)) -4 ) ".hpp"))
+      (if (equal "" (buffer-string))
+          (insert "#ifndef "(upcase (substring (buffer-name (current-buffer)) 0 -2)) "_H\n#define "
+                  (upcase (substring (buffer-name (current-buffer)) 0 -2)) "_H\n\n#endif"))))
+
+(defun c-file-enter ()
+  "Expands all member functions in the corresponding .h file"
+  (interactive)
+  (let ((c-file (buffer-name))
+        (h-file (concat (substring (buffer-name (current-buffer)) 0 -3 ) "h")))
+    (if (equal (substring (buffer-name (current-buffer)) -4 ) ".cpp")
+        (if (file-exists-p h-file)
+            (expand-member-functions h-file c-file)))))
+
+(defun insert-column-counter (n)
+  "Insert a sequence of integers vertically.
+   For example, if your text is:
+
+   a b
+   c d
+   e f
+
+   and your cursor is after “a”, then calling this function with argument
+   3 will change it to become:
+
+   a1 b
+   c2 d
+   e3 f
+
+   If there are not enough existing lines after the cursor
+   when this function is called, it aborts at the last line.
+
+   This command is conveniently used together with `kill-rectangle' and `string-rectangle'."
+
+  (interactive "nEnter the max integer: ")
+
+  (let ((i 1) colpos line-move-visual-original)
+    (setq line-move-visual-original line-move-visual)
+    (setq line-move-visual nil)
+    (setq colpos (- (point) (point-at-bol)))
+    (while (<= i n)
+      (insert (number-to-string i))
+      (forward-line) (beginning-of-line) (forward-char colpos)
+      (setq i (1+ i))
+      )
+    (setq line-move-visual line-move-visual-original)
+))
+
+(defun my-grep ()
+  "grep the whole directory for something defaults to term at cursor position"
+  (interactive)
+  (setq default (thing-at-point 'symbol))
+  (setq needle (or (read-string (concat "grep for <" default "> ")) default))
+  (setq needle (if (equal needle "") default needle))
+  (grep (concat "egrep -s -i -n " needle " * /dev/null")))
+
+;;(add-hook 'text-mode-hook 'turn-on-auto-fill)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               General Key bindind
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; disable C-x, C-z (normally suspends or minimizes emacs)
+(global-unset-key [(control x) (control z)])
+(global-unset-key [(control return)])
+
+(global-set-key [(control t)] 'indent-region)
+(global-set-key [(control z)] 'undo)
+(global-set-key [(meta g)] 'goto-line)
+(global-set-key [(control return)] 'query-replace)
+(global-set-key [(meta return)] 'replace-regexp)
+(global-set-key [(meta m)] 'ff-find-related-file)
+(global-set-key [(meta o)] 'other-window)
+(global-set-key [(meta a)] 'back-to-indentation)
+;;(global-set-key [(control o)] 'hippie-expand) ;;
+(global-set-key (kbd "C-x r r") 'narrow-to-region)
+(global-set-key (kbd "C-x w") 'widen)
+(global-set-key (kbd "C-x j") 'narrow-to-defun)
+
+;; quick keyboard jump
+
+(global-set-key [(control f)] '(lambda () (interactive) (forward-paragraph) (redraw-display)))
+(global-set-key [(control b)] '(lambda () (interactive) (backward-paragraph) (redraw-display)))
+;;(global-set-key [(meta f)] 'forward-word)
+;;(global-set-key [(meta b)] 'backward-word)
+(global-set-key [(meta b)] 'geosoft-backward-word)
+(global-set-key [(meta f)] 'geosoft-forward-word)
+(global-set-key [(meta .)] 'forward-char)
+(global-set-key [(meta \,)] 'backward-char)
+(global-set-key [(control .)] 'next-line)
+(global-set-key [(control \,)] 'previous-line)
+
+;; remember mouse pointer
+(global-set-key (kbd "C-c r r") '(lambda () (interactive) (point-to-register ?x)))
+(global-set-key (kbd "C-c r p") '(lambda () (interactive) (jump-to-register ?x)))
+
+;;(define-key minibuffer-local-map (kbd "M-n") 'next-complete-history-element)
+;;(define-key minibuffer-local-map (kbd "<up>") 'previous-complete-history-element)
+;;(define-key minibuffer-local-map (kbd "<down>") 'next-complete-history-element)
+;;(define-key minibuffer-local-map (kbd "<down>") 'isearch-forward-at-point)
+(global-set-key [(control j)] 'isearch-forward-symbol-at-point)
+(global-set-key (kbd "C-c e") '(lambda () (interactive) (end-of-buffer) (redraw-display)))
+(global-set-key (kbd "C-c b") '(lambda () (interactive) (beginning-of-buffer) (redraw-display)))
+;;(global-set-key (kbd "C-x C-v") 'ido-find-file-in-tag-files)
+(global-set-key (kbd "C-x C-t") 'helm-etags-select)
+(global-set-key (kbd "C-x C-j") 'idomenu)
+(global-set-key (kbd "C-x r v") 'register-list)
+(global-set-key (kbd "C-x o") 'helm-occur)
+
+;; was just-one-space
+(global-set-key (kbd "M-SPC") 'set-mark-command)
+
+;; quick white-spaces and other removal commands
+(global-set-key (kbd "C-c s k") 'just-one-space)
+(global-set-key (kbd "C-0") 'delete-enclosed-text)
+(global-set-key (kbd "C-1") 'delete-other-windows)
+(global-set-key (kbd "C-q") 'kill-info-buffers)
+
+(global-set-key [(control k)] 'kill-and-join-forward)
+
+;; auto-indent after RET
+(define-key global-map (kbd "RET") 'newline-and-indent)
+(define-key global-map (kbd "C-c g") 'my-grep)
+;;(define-key global-map (kbd "C-7") 'multi-term)
+(define-key global-map (kbd "C-8") 'multi-term-dedicated-open)
+(define-key global-map (kbd "C-x C-o") 'company-complete)
+(define-key global-map (kbd "<f5>") 'redraw-display)
+
+(define-key global-map (kbd "<f6>") 'beautify-json)
+
+(require 'col-highlight)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Shell stuff
+
+;;(require 'shell-command) (shell-command-completion-mode)
+;;
+;;(autoload 'ansi-color-for-comint-mode-on "ansi-color" nil t)
+;;;;(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+;;
+;;(defun shell-clear()
+;;  "In shell-mode,clear all display and move cursor top of the buffer."
+;;  (interactive)
+;;  (recenter 0))
+;;(eval-after-load "shell"
+;;  '(define-key shell-mode-map "\C-l" 'shell-clear))
+;;
+;;; interpret and use ansi color codes in shell output windows
+;;(ansi-color-for-comint-mode-on)
+;;
+;;; make completion buffers disappear after 3 seconds.
+;;(add-hook 'completion-setup-hook
+;;          (lambda () (run-at-time 3 nil
+;;                                  (lambda () (delete-windows-on "*Completions*")))))
+;; Multi-term mode
+;;(require 'multi-term)
+;;(setq multi-term-program "/bin/bash")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Rectangle operations
+
+(global-set-key (kbd "C-x r C-SPC") 'rm-set-mark)
+(global-set-key (kbd "C-x r C-x") 'rm-exchange-point-and-mark)
+(global-set-key (kbd "C-x r C-w") 'rm-kill-region)
+(global-set-key (kbd "C-x r M-w") 'rm-kill-ring-save)
+(autoload 'rm-set-mark "rect-mark"
+  "Set mark for rectangle." t)
+(autoload 'rm-exchange-point-and-mark "rect-mark"
+  "Exchange point and mark for rectangle." t)
+(autoload 'rm-kill-region "rect-mark"
+  "Kill a rectangular region and save it in the kill ring." t)
+(autoload 'rm-kill-ring-save "rect-mark"
+  "Copy a rectangular region to the kill ring." t)
+
+(defun geosoft-forward-word ()
+  ;; Move one word forward. Leave the pointer at start of word
+  ;; instead of emacs default end of word. Treat _ as part of word
+  (interactive)
+  (forward-char 1)
+  (backward-word 1)
+  (forward-word 2)
+  (backward-word 1)
+  (backward-char 1)
+  (cond ((looking-at "_") (forward-char 1) (geosoft-forward-word))
+        (t (forward-char 1))))
+
+(defun geosoft-backward-word ()
+  ;; Move one word backward. Leave the pointer at start of word
+  ;; Treat _ as part of word
+  (interactive)
+  (backward-word 1)
+  (backward-char 1)
+  (cond ((looking-at "_") (geosoft-backward-word))
+        (t (forward-char 1))))
+
+(require 'goto-last-change)
+
+(add-hook 'c-mode-hook
+          (lambda ()
+            ;;(auto-fill-mode 1)
+            ;; don't let next-line add new lines at end of file in CC mode
+            (set (make-local-variable 'require-final-newline) nil)
+            (set (make-local-variable 'fill-nobreak-predicate)
+                 (lambda ()
+                   (not (eq (get-text-property (point) 'face)
+                            'font-lock-comment-face))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               DOC-mode
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;(require 'doc-mode)
+;;(add-hook 'c-mode-common-hook 'doc-mode)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Semantic
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;(require 'semantic/ia)
+;;(global-ede-mode 1)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;; Yasnippet
+;;(add-to-list 'load-path "~/.emacs.d/lisp/yasnippet")
+;;(require 'yasnippet)
+;;(yas-global-mode 1)
+;;(require 'company-yasnippet)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Auto-complete (using Semantic)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;(setq load-path (append load-path (list "~/.emacs.d/lisp/auto-complete/")))
+;;(setq load-path (append load-path (list "~/.emacs.d/elpa/popup-20130324.1305/")))
+;;(require 'auto-complete)
+;;(require 'auto-complete-config)
+;;(ac-config-default)
+;;(add-to-list 'ac-dictionary-directories "~/.emacs.d/ac-dict")
+;;(set-cursor-color "white")
+;;(setq ac-auto-start nil) ;; Don't start the auto-complete automatically
+;;(ac-set-trigger-key "TAB")
+;;(ac-set-trigger-key "<tab>")
+;;
+;;(defun ac-c++-mode-setup ()
+;;  (setq ac-sources (append '(ac-source-semantic) ac-sources)))
+;;(add-hook 'c++-mode-hook 'ac-c++-mode-setup)
+;;(semantic-mode 1)
+(setq ac-use-menu-map t)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               LUA-mode configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(require 'lua-mode)
+(require 'flymake-lua)
+(add-hook 'lua-mode-hook 'flymake-lua-load)
+
+;; use an indentation width of two spaces
+(setq lua-indent-level 4)
+
+;; Add dangling '(', remove '='
+(setq lua-cont-eol-regexp
+      (eval-when-compile
+        (concat
+         "\\((\\|\\_<"
+         (regexp-opt '("and" "or" "not" "in" "for" "while"
+                       "local" "function") t)
+         "\\_>\\|"
+         "\\(^\\|[^" lua-operator-class "]\\)"
+         (regexp-opt '("+" "-" "*" "/" "^" ".." "==" "<" ">" "<=" ">=" "~=") t)
+         "\\)"
+         "\\s *\\=")))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               MSDN-Help
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun msdn-help ()
+  (interactive "*")
+  (shell-command (concat "v10Help.pl "(current-word))))
+
+;;(global-set-key (kbd "C-c m") 'msdn-help)
+(global-set-key (kbd "C-c m") 'newline-and-indent)
+;; Work around to get rid of some perl errors (used in the F1.help script)
+(setenv "LC_ALL" "C")
+(setenv "LANG" "C")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Emacs compile
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(setq w32-get-true-file-attributes nil)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Utils
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun align-members (BEG END)
+  (interactive "r")
+  (align-regexp BEG END "\,\\(\\s-*\\)" 1 1))
+
+;; after copy Ctrl+c in X11 apps, you can paste by `yank' in emacs
+(setq x-select-enable-clipboard t)
+
+;; after mouse selection in X11, you can paste by `yank' in emacs
+;;(setq x-select-enable-primary t)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Save minibuffer history
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(savehist-mode 1)
+(setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
+(setq savehist-file "~/.emacs.d/tmp/savehist")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Emacs Packages
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(require 'package) ;; You might already have this line
+(add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/") t)
+(when (< emacs-major-version 24)
+  ;; For important compatibility libraries like cl-lib
+  (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
+(package-initialize) ;; You might already have this line
+
+;;(require 'init-elpa)
+
+;; Enable the undo-tree mode for all the buffers
+;;(global-undo-tree-mode)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Cygwin/Shell configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;(setenv "PATH"
+;;        (concat
+;;         "C:/cygwin/usr/local/bin" ";"
+;;         "C:/cygwin/usr/bin" ";"
+;;         "C:/cygwin/bin" ";"
+;;         "C:/cygdrive/c/Users/FlcUser/bin" ";"
+;;         "/cygdrive/d/Program Files (x86)/emacs/bin/" ";"
+;;         (getenv "PATH")
+;;         ))
+;;
+;;(setq shell-file-name "C:/cygwin/bin/bash.exe")
+;;;;(require 'cygwin-mount)
+;;;;(cygwin-mount-activate)
+;;(setenv "CYGWIN" "nodosfilewarning")
+;;
+;;(defun cygwin-shell ()
+;;  "Run cygwin bash in shell mode."
+;;  (interactive)
+;;  (let ((explicit-shell-file-name "C:/cygwin/bin/bash"))
+;;    (call-interactively 'shell)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               uniquify
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; uniquify changes conflicting buffer names from file<2> etc
+(require 'uniquify)
+(setq uniquify-buffer-name-style 'reverse)
+(setq uniquify-separator "/")
+(setq uniquify-after-kill-buffer-p t) ; rename after killing uniquified
+(setq uniquify-ignore-buffers-re "^\\*") ; don't muck with special buffers
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Full screen Mode for windows
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(menu-bar-mode -1)
+(toggle-scroll-bar -1)
+(tool-bar-mode -1)
+(toggle-frame-fullscreen)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Diff-hl-mode (highlight buffer changes)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(global-diff-hl-mode)
+(define-key diff-hl-mode-map (kbd "M-n") 'diff-hl-next-hunk)
+(define-key diff-hl-mode-map (kbd "M-p") 'diff-hl-previous-hunk)
+(define-key diff-hl-mode-map (kbd "C-c r") 'diff-hl-revert-hunk)
+(define-key diff-hl-mode-map (kbd "C-c t") 'diff-hl-diff-goto-hunk)
+(setq diff-hl-fring-bmp-function 'diff-hl-fringe-bmp-from-type)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Duplicate lines handling
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Remove duplicate lines in a region
+(defun uniq-lines (beg end)
+  "Unique lines in region.
+Called from a program, there are two arguments:
+BEG and END (region to sort)."
+  (interactive "r")
+  (save-excursion
+    (save-restriction
+      (narrow-to-region beg end)
+      (goto-char (point-min))
+      (while (not (eobp))
+        (kill-line 1)
+        (yank)
+        (let ((next-line (point)))
+          (while
+              (re-search-forward
+               (format "^%s" (regexp-quote (car kill-ring))) nil t)
+            (replace-match "" nil nil))
+          (goto-char next-line))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Load custom Macros
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(load-file "~/.emacs.d/lisp/macros.el")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Omnisharp configuration
+
+;;(add-hook 'after-init-hook 'global-company-mode)
+(add-hook 'csharp-mode-hook 'omnisharp-mode)
+;;(add-hook 'csharp-mode-hook 'flymake-mode)
+
+
+;;(eval-after-load 'company '(add-to-list 'company-backends 'company-omnisharp))
+
+(eval-after-load "omnisharp"
+  '(progn
+     (define-key omnisharp-mode-map (kbd "C-n") 'omnisharp-go-to-definition)
+     ;;(define-key omnisharp-mode-map (kbd "M-t") 'omnisharp-navigate-to-current-file-member)
+     (define-key omnisharp-mode-map (kbd "C-x C-v") 'omnisharp-navigate-to-solution-file)
+     (define-key omnisharp-mode-map (kbd "C-x C-T") 'omnisharp-navigate-to-solution-member)
+     (define-key omnisharp-mode-map (kbd "C-c i") 'omnisharp-current-type-information)
+     (define-key omnisharp-mode-map (kbd "C-c j") 'omnisharp-find-usages)
+     (define-key omnisharp-mode-map (kbd "C-c C-f") 'omnisharp-fix-usings)
+     (define-key omnisharp-mode-map (kbd ".") 'omnisharp-add-dot-and-auto-complete)
+     (define-key global-map (kbd "C-x C-o") 'omnisharp-auto-complete)
+     (flycheck-mode t)
+     (define-key omnisharp-mode-map (kbd "C-c d") 'omnisharp-current-type-documentation)))
+
+
+(setq omnisharp-imenu-support t)
+
+(setq omnisharp--windows-curl-tmp-file-path "D:/tmp.cs")
+(setq omnisharp--curl-executable-path "D://curl//curl.exe")
+
+;;(global-set-key (kbd "C-c n") 'omnisharp-build-in-emacs)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; XML folding (using showhide mode)
+
+(add-to-list 'hs-special-modes-alist
+             '(nxml-mode
+               "<!--\\|<[^/>]>\\|<[^/][^>]*[^/]>"
+               ""
+               "<!--" ;; won't work on its own; uses syntax table
+               (lambda (arg) (my-nxml-forward-element))
+               nil))
+
+(defun my-nxml-forward-element ()
+  (let ((nxml-sexp-element-flag))
+    (setq nxml-sexp-element-flag (not (looking-at "<!--")))
+    (unless (looking-at outline-regexp)
+      (condition-case nil
+          (nxml-forward-balanced-item 1)
+        (error nil)))))
+
+(require 'fold-dwim)
+
+(global-set-key (kbd "C-c C-p") 'hs-show-block)
+(global-set-key (kbd "C-c C-l") 'hs-hide-block)
+(global-set-key (kbd "C-c C-y") 'hs-hide-level)
+(global-set-key (kbd "C-c C-a") 'hs-show-all)
+
+(defun my-nxml-hook () (hs-minor-mode 1))
+(add-hook 'nxml-mode-hook 'my-nxml-hook)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Dired configuration
+
+(require 'dired-aux)
+
+(eval-after-load "dired"
+  '(progn
+     (define-key dired-mode-map (kbd "C-p") 'dired-up-directory)
+     (define-key dired-mode-map (kbd "C-S-n") 'dired-create-directory)
+     ))
+
+(setq ibuffer-saved-filter-groups
+      (quote (("default"
+               ("dired" (mode . dired-mode))))))
+
+;; Copy the selected file to the splited window
+(setq dired-dwim-target t)
+
+;; Make sizes human-readable by default, sort version numbers
+;; correctly, and put dotfiles and capital-letters first.
+(setq-default dired-listing-switches "-alhv")
+
+;; One buffer is created for all the visited directories
+(put 'dired-find-alternate-file 'disabled nil)
+
+;; Do not prompt for "recursive coppy"
+(setq dired-recursive-copies 'always)
+
+(require 'dired-efap)
+(define-key dired-mode-map [f2] 'dired-efap)
+;;; Only if you want to control rename with the mouse...
+(define-key dired-mode-map [down-mouse-1] 'dired-efap-click)
+
+;; Auto-refresh dired on file change
+(add-hook 'dired-mode-hook 'auto-revert-mode)
+
+;; Dired Filters
+;;
+;; dired-filter-by-name
+;; dired-filter-by-regexp
+;; dired-filter-by-extension
+;; dired-filter-by-dot-files
+;; dired-filter-by-omit
+;; dired-filter-by-predicate
+;; dired-filter-by-file
+;; dired-filter-by-directory
+;; dired-filter-by-mode
+;; dired-filter-by-symlink
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Occur
+(require 'occur-x)
+(add-hook 'occur-mode-hook 'turn-on-occur-x-mode)
+
+(require 'compile)
+(require 'flymake)
+
+(defun nxml-where ()
+  "Display the hierarchy of XML elements the point is on as a path."
+  (interactive)
+  (let ((path nil))
+    (save-excursion
+      (save-restriction
+        (widen)
+        (while (and (< (point-min) (point)) ;; Doesn't error if point is at beginning of buffer
+                    (condition-case nil
+                        (progn
+                          (nxml-backward-up-element) ; always returns nil
+                          t)
+                      (error nil)))
+          (setq path (cons (xmltok-start-tag-local-name) path)))
+        (if (called-interactively-p t)
+            (message "/%s" (mapconcat 'identity path "/"))
+          (format "/%s" (mapconcat 'identity path "/")))))))
+
+
+;; This mode highlights the autocompleted parts
+(require 'browse-kill-ring)
+
+(defun bf-pretty-print-xml-region (begin end)
+  "Pretty format XML markup in region. You need to have nxml-mode
+  http://www.emacswiki.org/cgi-bin/wiki/NxmlMode installed to do
+  this.  The function inserts linebreaks to separate tags that have
+  nothing but whitespace between them.  It then indents the markup
+  by using nxml's indentation rules."
+  (interactive "r")
+  (save-excursion
+    (nxml-mode)
+    (goto-char begin)
+    (while (search-forward-regexp "\>[ \\t]*\<" nil t)
+      (backward-char) (insert "\n"))
+    (indent-region begin end))
+  (message "Ah, much better!"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; ORG mode configuration
+
+;; -*- mode: elisp -*-
+
+;; Disable the splash screen (to enable it agin, replace the t with 0)
+(setq inhibit-splash-screen t)
+
+;; keep track of the time of the closed items
+(setq org-log-done 'time)
+
+;; Enable transient mark mode
+(transient-mark-mode 1)
+
+;;;;org-mode configuration
+;; Enable org-mode
+(require 'org)
+
+(define-key global-map "\C-cl" 'org-store-link)
+(define-key global-map "\C-ca" 'org-agenda)
+(setq org-log-done t)
+
+(setq org-agenda-files (list "~/org/main.org"))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Emacs Themes
+;;(load-theme 'spacegray t)
+;;(load-theme 'zenburn t)
+(load-theme 'monokai t)
+(set-face-attribute 'region nil :background "#8b7500")
+
+;; Define the emacs region color
+;;(set-face-background 'region "#8b8b7a")
+
+;; Customization
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(iedit-occurrence ((t (:inherit highlight :background "orange red"))))
+ '(isearch ((t (:background "yellow" :foreground "forest green"))))
+ '(lazy-highlight ((t (:background "yellow" :foreground "forest green" :inverse-video nil)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Shell
+;;(setq explicit-shell-file-name "C:/cygwin/bin/bash.exe")
+;;(setq shell-file-name "bash")
+;;(setq explicit-bash.exe-args '("--noediting" "--login" "-i"))
+;;(setenv "SHELL" shell-file-name)
+;;(add-hook 'comint-output-filter-functions 'comint-strip-ctrl-m)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Hide some minor modes
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(require 'diminish)
+(diminish 'abbrev-mode "Abv")
+;;(diminish 'undo-tree-mode "UT")
+(diminish 'visual-line-mode "VL")
+;;(diminish 'company-mode "COM")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               JSON mode
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun beautify-json ()
+  (interactive)
+  (let ((b (if mark-active (min (point) (mark)) (point-min)))
+        (e (if mark-active (max (point) (mark)) (point-max))))
+    (shell-command-on-region b e "python -mjson.tool" (current-buffer) t)))
+
+(eval-after-load "json-mode" '(define-key json-mode-map (kbd "M-.") nil))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Bookmarks management
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(require 'bookmark)
+
+(setq bookmark-save-flag 1) ; everytime bookmark is changed, automatically save it
+
+; Show the bookmarks in the ctr x-f list also
+
+(defun bookmark-to-abbrevs ()
+  "Create abbrevs based on `bookmark-alist'."
+  (dolist (bookmark bookmark-alist)
+    (let* ((name (car bookmark))
+           (file (bookmark-get-filename name)))
+      (define-abbrev global-abbrev-table name file))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                         TRAMP
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(setq tramp-default-method "ssh")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               LAB
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(require 'iedit)
+(global-set-key (kbd "C-3") 'iedit-mode)
+
+(require 'server)
+(server-start)
+(add-hook 'server-visit-hook 'toggle-frame-fullscreen)
+
+(define-key isearch-mode-map (kbd "C-o")
+  (lambda ()
+    (interactive)
+    (let ((case-fold-search isearch-case-fold-search))
+      (occur (if isearch-regexp isearch-string
+               (regexp-quote isearch-string))))))
+
+(global-hl-line-mode 1)
+
+;; Highlight current line
+(when (> (display-color-cells) 8)
+  (global-hl-line-mode t))
+
+
+(autoload 'nsis-mode "nsis-mode" "NSIS mode" t)
+
+(setq auto-mode-alist (append '(("\\.\\([Nn][Ss][Ii]\\)$" .
+                                 nsis-mode)) auto-mode-alist))
+
+(setq auto-mode-alist (append '(("\\.\\([Nn][Ss][Hh]\\)$" .
+                                 nsis-mode)) auto-mode-alist))
+
+(autoload 'csharp-mode "csharp-mode" "Major mode for editing C# code." t)
+(setq auto-mode-alist
+      (append '(("\\.cs$" . csharp-mode)) auto-mode-alist))
+
+(defun toggle-camelcase-underscores ()
+  "Toggle between camcelcase and underscore notation for the symbol at point."
+  (interactive)
+  (save-excursion
+    (let* ((bounds (bounds-of-thing-at-point 'symbol))
+           (start (car bounds))
+           (end (cdr bounds))
+           (currently-using-underscores-p (progn (goto-char start)
+                                                 (re-search-forward "_" end t))))
+      (if currently-using-underscores-p
+          (progn
+            (upcase-initials-region start end)
+            (replace-string "_" "" nil start end)
+            (downcase-region start (1+ start)))
+        (replace-regexp "\\([A-Z]\\)" "_\\1" nil (1+ start) end)
+        (downcase-region start end)))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;               Build inside Emacs
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(setq compilation-read-command nil)
+(global-set-key (kbd "C-c n") 'compile)
+
+(defun my-flycheck-c-setup ()
+  (setq flycheck-gcc-language-standard "gnu99"))
+
+(add-hook 'c-mode-hook 'my-flycheck-c-setup)
+
+(put 'narrow-to-region 'disabled nil)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;          Workaround to resolve the display issue on virtual-box
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(add-hook 'isearch-update-post-hook 'redraw-display)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  Perforce P4
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(require 'p4)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  GDB
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(gud-tooltip-mode t)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  ESHELL
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;(setq shell-file-name "bash")
+;;(setq shell-command-switch "-ic")
+;;
+;;(defun eshell-clear ()
+;;  "Clears the shell buffer ala Unix's clear or DOS' cls"
+;;  (interactive)
+;;  ;; the shell prompts are read-only, so clear that for the duration
+;;  (let ((inhibit-read-only t))
+;;    ;; simply delete the region
+;;    (delete-region (point-min) (point-max)))
+;;  (eshell-send-input) )
+;;(add-hook 'eshell-mode-hook
+;;          '(lambda () (define-key eshell-mode-map "\C-l" 'eshell-clear)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  Helm
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(require 'helm)
+(require 'helm-config)
+
+;; The default "C-x c" is quite close to "C-x C-c", which quits Emacs.
+;; Changed to "C-c h". Note: We must set "C-c h" globally, because we
+;; cannot change `helm-command-prefix-key' once `helm-config' is loaded.
+(global-set-key (kbd "C-c h") 'helm-command-prefix)
+(global-unset-key (kbd "C-x c"))
+
+(define-key helm-map (kbd "<tab>") 'helm-execute-persistent-action) ; rebind tab to run persistent action
+(define-key helm-map (kbd "C-i") 'helm-execute-persistent-action) ; make TAB works in terminal
+(define-key helm-map (kbd "C-z")  'helm-select-action) ; list actions using C-z
+
+(when (executable-find "curl")
+  (setq helm-google-suggest-use-curl-p t))
+
+(setq helm-split-window-in-side-p           t ; open helm buffer inside current window, not occupy whole other window
+      helm-move-to-line-cycle-in-source     t ; move to end or beginning of source when reaching top or bottom of source.
+      helm-ff-search-library-in-sexp        t ; search for library in `require' and `declare-function' sexp.
+      helm-scroll-amount                    8 ; scroll 8 lines other window using M-<next>/M-<prior>
+      helm-ff-file-name-history-use-recentf t)
+
+(helm-mode 1)
+(helm-adaptive-mode t) ;; Order commands by the frequency of use
+(helm-fuzzier-mode 1)
+(helm-flx-mode +1)
+
+(global-set-key (kbd "C-x C-f") 'helm-find-files)
+(global-set-key (kbd "M-x") 'helm-M-x)
+(global-set-key (kbd "C-x b") 'helm-buffers-list)
+(global-set-key (kbd "C-x r b") 'helm-bookmarks)
+(global-set-key (kbd "C-x C-y") 'helm-show-kill-ring)
+(global-set-key (kbd "C-x y") 'helm-flyspell-correct)
+(global-set-key (kbd "C-x C-n") 'helm-swoop)
+(ido-mode -1)
+
+(require 'helm-projectile)
+(projectile-global-mode)
+(setq projectile-completion-system 'helm)
+(helm-projectile-on)
+
+(defvar my/book-notes-directory "~/workspaces/dev_notes/")
+(defun my/helm-do-grep-book-notes ()
+  "Search my book notes."
+  (interactive)
+  (helm-do-grep-1 (list my/book-notes-directory)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  Projectile
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(global-set-key (kbd "C-c C-f") 'helm-find-files)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; quick "pairs" generation
+
+;; the matching pairs “(){}[]” are typed by the weak 4th and 5th fingers.
+;; It is convenient to move them under the home row, and also to type them
+;; always in pairs.
+
+;; auto close bracket insertion. New in emacs 24
+(electric-pair-mode 1)
+;; make return key not auto indent
+;;(electric-indent-mode 1)
+
+(defun insert-indent-brackets()
+  (progn
+    (let (reg-start reg-end)
+      (setq reg-start (point))
+      (insert "{}")
+      (setq reg-end (point))
+      (indent-region reg-start reg-end))))
+
+(defun insert-indent-brackets-newline()
+  (progn
+    (let (reg-start reg-end)
+      (setq reg-start (point))
+      (insert "\n{\n}\n")
+      (setq reg-end (point))
+      (indent-region reg-start reg-end))))
+
+(global-set-key (kbd "C-x l") (lambda () (interactive) (insert "[]") (backward-char 1)))
+(global-set-key (kbd "C-x p") (lambda () (interactive) (insert "()") (backward-char 1)))
+(global-set-key (kbd "C-x ,") (lambda () (interactive) (insert "::")))
+(global-set-key (kbd "C-x c") (lambda () (interactive) (insert "{}") (backward-char 1)))
+(global-set-key (kbd "C-x n") (lambda () (interactive) (insert "\"\"")(backward-char 1)))
+
+;; Some used pieces of code
+(global-set-key (kbd "C-x f") (lambda () (interactive) (setq mypos (point)) (insert "if()") (insert-indent-brackets-newline) (newline-and-indent) (goto-char mypos)))
+(global-set-key (kbd "C-x g") (lambda () (interactive) (setq mypos (point)) (insert "for(;;)") (insert-indent-brackets-newline) (newline-and-indent) (goto-char mypos)))
+;;(global-set-key (kbd "C-x w") (lambda () (interactive) (setq mypos (point)) (insert "while()") (insert-indent-brackets-newline) (newline-and-indent) (goto-char mypos)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  Calculate in the buffer
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(global-set-key (kbd "C-c m") 'fc-calculate-region)
+(defun fc-calculate-region (start end &optional prefix)
+  "Evaluate the mathematical expression within the region, and
+replace it with its result.
+
+With a prefix arg, do not replace the region, but instead put the
+result into the kill ring."
+  (interactive "r\nP")
+  (let* ((expr (buffer-substring start end))
+         (result (fc-bc-calculate-expression expr))
+         (ends-with-newline (string-match "\n$" expr)))
+    (if prefix
+        (progn
+          (kill-new result)
+          (message "%s" result))
+      (delete-region start end)
+      (insert result)
+      (when ends-with-newline
+        (insert "\n")))))
+
+(defun fc-bc-calculate-expression (expr)
+  "Evaluate `expr' as a mathematical expression, and return its result.
+
+This actually pipes `expr' through bc(1), replacing newlines with
+spaces first. If bc(1) encounters an error, an error is
+signalled."
+  (with-temp-buffer
+    (insert expr)
+    (goto-char (point-min))
+    (while (search-forward "\n" nil t)
+      (replace-match " " nil t))
+    (goto-char (point-max))
+    (insert "\n")
+    (call-process-region (point-min)
+                         (point-max)
+                         "bc" t t nil "-lq")
+    (goto-char (point-min))
+    (when (search-forward "error" nil t)
+      (error "Bad expression"))
+    (while (search-forward "\n" nil t)
+      (replace-match "" nil t))
+    (buffer-string)))
+
+(global-set-key (kbd "C-x r a") 'fc-add-rectangle)
+(defun fc-add-rectangle (start end)
+  "Add all the lines in the region-rectangle and put the result in the
+kill ring."
+  (interactive "r")
+  (let ((sum 0))
+    (mapc (lambda (line)
+            (string-match "-?[0-9.]+" line)
+            (setq sum (+ sum (string-to-number (match-string 0 line)))))
+          (extract-rectangle start end))
+    (kill-new (number-to-string sum))
+    (message "%s" sum)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  Powerline configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(powerline-default-theme)
+(put 'erase-buffer 'disabled nil)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  Multi-term
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(when (require 'term nil t) ; only if term can be loaded..
+  (setq term-bind-key-alist
+        (list (cons "C-c C-c" 'term-interrupt-subjob)
+              (cons "C-p" 'previous-line)
+              (cons "C-n" 'next-line)
+              (cons "M-f" 'term-send-forward-word)
+              (cons "M-b" 'term-send-backward-word)
+              (cons "C-c C-j" 'term-line-mode)
+              (cons "C-c C-k" 'term-char-mode)
+              (cons "M-DEL" 'term-send-backward-kill-word)
+              (cons "M-d" 'term-send-forward-kill-word)
+              (cons "<C-left>" 'term-send-backward-word)
+              (cons "<C-right>" 'term-send-forward-word)
+              (cons "C-r" 'term-send-reverse-search-history)
+              (cons "M-p" 'term-send-raw-meta)
+              (cons "C-s" 'isearch)
+              (cons "M-y" 'term-send-raw-meta)
+              (cons "C-y" 'term-send-raw))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  Problematic keybindings (TODO Invistigate why they don't work in C++ mode)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(global-set-key (kbd "C-c h") 'kill-whitespace)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  Company
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;(eval-after-load 'company '(add-to-list 'company-backends 'company-semantic))
+(global-company-mode '(not python-mode))
+(add-hook 'after-init-hook 'global-company-mode) ;; Enable company for all buffers
+(eval-after-load 'company '(add-to-list 'company-backends 'company-irony))
+
+(define-key company-active-map (kbd "C-n") 'company-select-next-or-abort)
+(define-key company-active-map (kbd "C-p") 'company-select-previous-or-abort)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  Irony
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(add-hook 'c++-mode-hook 'irony-mode)
+(add-hook 'c-mode-hook 'irony-mode)
+
+;; replace the `completion-at-point' and `complete-symbol' bindings in
+;; irony-mode's buffers by irony-mode's function
+(defun my-irony-mode-hook ()
+  (define-key irony-mode-map [remap completion-at-point] 'irony-completion-at-point-async)
+  (define-key irony-mode-map [remap complete-symbol] 'irony-completion-at-point-async))
+
+(add-hook 'irony-mode-hook 'my-irony-mode-hook)
+(add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
+(eval-after-load 'flycheck '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  Flyspell mode configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(add-hook 'text-mode-hook 'flyspell-mode)
+(add-hook 'prog-mode-hook 'flyspell-prog-mode)
+(eval-after-load "flyspell"
+  '(define-key flyspell-mode-map (kbd "C-.") nil))
+(eval-after-load "flyspell"
+  '(define-key flyspell-mode-map (kbd "C-,") nil))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  White spaces handling
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(global-ethan-wspace-mode 1)
+(setq mode-require-final-newline nil) ;; disable this mode since the ethan-wspace takes care of it
