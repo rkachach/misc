@@ -38,7 +38,10 @@
  '(p4-global-key-prefix [24 241])
  '(package-selected-packages
    (quote
-    (magit helm-descbinds logview helm-flx helm-fuzzier helm-flyspell flycheck-irony helm-company company-irony irony company-c-headers helm-gtags ethan-wspace smartscan powerline helm-mt multi-term popup auto-complete jedi helm-projectile helm fish-mode virtualenv highlight-indent-guides smart-operator cython-mode nose pylint flycheck python-mode visual-ascii-mode p4 zenburn-theme w32-browser undo-tree spinner spacegray-theme solarized-theme smex seq register-list openwith omnisharp occur-x nsis-mode monokai-theme moe-theme mediawiki let-alist json-mode js2-mode iedit fold-dwim flymake-cursor flx-ido flex-isearch dired-filter dired-efap diminish diff-hl cygwin-mount company browse-kill-ring anything-complete anything ack-menu)))
+    (helm-core markdown-mode yafolding yaml-mode flymake-json magit helm-descbinds logview helm-flx helm-fuzzier helm-flyspell flycheck-irony helm-company company-irony irony company-c-headers helm-gtags ethan-wspace smartscan powerline helm-mt multi-term popup auto-complete jedi helm-
+    
+    
+    helm fish-mode virtualenv highlight-indent-guides smart-operator cython-mode nose pylint flycheck python-mode visual-ascii-mode p4 zenburn-theme w32-browser undo-tree spinner spacegray-theme solarized-theme smex seq register-list openwith omnisharp occur-x nsis-mode monokai-theme moe-theme mediawiki let-alist json-mode js2-mode iedit fold-dwim flymake-cursor flx-ido flex-isearch dired-filter dired-efap diminish diff-hl cygwin-mount company browse-kill-ring anything-complete anything ack-menu)))
  '(send-mail-function (quote smtpmail-send-it))
  '(show-paren-mode t)
  '(smtpmail-smtp-server "smtp.gmail.com.")
@@ -140,6 +143,7 @@
 (add-hook 'python-mode-hook
            (lambda ()
              (set (make-variable-buffer-local 'beginning-of-defun-function) 'py-beginning-of-def-or-class)
+             (defun py-help-at-point nil)
              (setq outline-regexp "def\\|class ")))
 
 (put 'downcase-region 'disabled nil)
@@ -170,9 +174,9 @@
 (interactive)
 (c-mode)
 (setq c-default-style "linux")
-(setq-default c-basic-offset 3)
+(setq-default c-basic-offset 2)
 (setq-default indent-tabs-mode nil)
-(setq default-tab-width 3)
+(setq default-tab-width 2)
 
 (defun my-c-mode-setup ()
   (progn
@@ -193,7 +197,6 @@
   (prog
    (c-set-offset 'innamespace after)
    (c-set-offset 'innamespace 0)
-   (c-set-offset 'topmost-intro 0)
    ))
 
 (add-hook 'c++-mode-hook 'my-c++-setup)
@@ -409,8 +412,8 @@ otherwise raises an error."
 ;;(set-background-color "Black")
 
 ;;DejaVu Sans Mono-12, Monaco-12
-(set-default-font "Inconsolata-11")
-(add-to-list 'default-frame-alist '(font . "Inconsolata-13"))
+;;(set-default-font "Inconsolata-13")
+;;(add-to-list 'default-frame-alist '(font . "Inconsolata-13"))
 
 ;; remove scrollbar
 
@@ -513,7 +516,13 @@ otherwise raises an error."
 (autoload 'ibuffer "ibuffer" "List buffers." t)
 
 ;; switch/toggle to the last visited buffer
-(global-set-key (kbd "C-M-g") 'mode-line-other-buffer)
+(defun my-switch-to-other-buffer ()
+  "Switch to other buffer"
+  (interactive)
+  (switch-to-buffer (other-buffer)))
+
+(global-set-key (kbd "C-M-g") 'my-switch-to-other-buffer)
+;;(global-set-key (kbd "C-M-g") 'mode-line-other-buffer) this doesn't work correctly
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;              Small functions
@@ -1507,7 +1516,7 @@ BEG and END (region to sort)."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         TRAMP
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(setq tramp-default-method "ssh")
+;;(setq tramp-default-method "ssh")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;               LAB
@@ -1649,7 +1658,8 @@ BEG and END (region to sort)."
 (global-set-key (kbd "C-x C-n") 'helm-swoop)
 (ido-mode -1)
 
-(require 'helm-projectile)
+(require 'helm-
+)
 (projectile-global-mode)
 (setq projectile-completion-system 'helm)
 (helm-projectile-on)
@@ -1664,6 +1674,9 @@ BEG and END (region to sort)."
 ;;                  Projectile
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (global-set-key (kbd "C-c C-f") 'helm-find-files)
+(setq projectile-enable-caching t)
+(define-key projectile-mode-map (kbd "s-p") 'projectile-command-map)
+(define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1811,6 +1824,7 @@ kill ring."
 
 (define-key company-active-map (kbd "C-n") 'company-select-next-or-abort)
 (define-key company-active-map (kbd "C-p") 'company-select-previous-or-abort)
+(setq company-global-modes '(not python-mode))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                  Irony
@@ -1844,3 +1858,4 @@ kill ring."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (global-ethan-wspace-mode 1)
 (setq mode-require-final-newline nil) ;; disable this mode since the ethan-wspace takes care of it
+(require 'tramp) ;; just to fix issue
