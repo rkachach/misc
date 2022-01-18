@@ -14,7 +14,7 @@
  '(comint-scroll-to-bottom-on-input t)
  '(current-language-environment "UTF-8")
  '(default-input-method "rfc1345")
- '(ediff-split-window-function (quote split-window-vertically) t)
+ '(ediff-split-window-function 'split-window-vertically t)
  '(global-font-lock-mode t nil (font-lock))
  '(helm-M-x-fuzzy-match t)
  '(helm-apropos-fuzzy-match t)
@@ -37,12 +37,8 @@
  '(isearch-lazy-highlight t)
  '(p4-global-key-prefix [24 241])
  '(package-selected-packages
-   (quote
-    (helm-core markdown-mode yafolding yaml-mode flymake-json magit helm-descbinds logview helm-flx helm-fuzzier helm-flyspell flycheck-irony helm-company company-irony irony company-c-headers helm-gtags ethan-wspace smartscan powerline helm-mt multi-term popup auto-complete jedi helm-
-    
-    
-    helm fish-mode virtualenv highlight-indent-guides smart-operator cython-mode nose pylint flycheck python-mode visual-ascii-mode p4 zenburn-theme w32-browser undo-tree spinner spacegray-theme solarized-theme smex seq register-list openwith omnisharp occur-x nsis-mode monokai-theme moe-theme mediawiki let-alist json-mode js2-mode iedit fold-dwim flymake-cursor flx-ido flex-isearch dired-filter dired-efap diminish diff-hl cygwin-mount company browse-kill-ring anything-complete anything ack-menu)))
- '(send-mail-function (quote smtpmail-send-it))
+   '(rust-mode tramp glsl-mode java-snippets java-imports markdown-mode yafolding yaml-mode flymake-json magit helm-descbinds logview helm-flx helm-fuzzier helm-flyspell flycheck-irony helm-company company-irony irony company-c-headers helm-gtags ethan-wspace smartscan powerline helm-mt multi-term popup auto-complete jedi helm-projectile helm fish-mode virtualenv highlight-indent-guides smart-operator cython-mode nose pylint flycheck python-mode visual-ascii-mode p4 zenburn-theme w32-browser undo-tree spinner spacegray-theme solarized-theme smex seq register-list openwith omnisharp occur-x nsis-mode monokai-theme moe-theme mediawiki let-alist json-mode js2-mode iedit fold-dwim flymake-cursor flx-ido flex-isearch dired-filter dired-efap diminish diff-hl cygwin-mount company browse-kill-ring anything-complete anything ack-menu))
+ '(send-mail-function 'smtpmail-send-it)
  '(show-paren-mode t)
  '(smtpmail-smtp-server "smtp.gmail.com.")
  '(smtpmail-smtp-service 25))
@@ -835,7 +831,9 @@ ref `bounds-of-thing-at-point'."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Spell Checking
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(add-to-list 'exec-path "D:/software/hunspell/bin/") (setq ispell-program-name (locate-file "hunspell" exec-path exec-suffixes 'file-executable-p))
 (setq ispell-dictionary "english")
+(require 'ispell)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Other util functions
@@ -1658,8 +1656,7 @@ BEG and END (region to sort)."
 (global-set-key (kbd "C-x C-n") 'helm-swoop)
 (ido-mode -1)
 
-(require 'helm-
-)
+(require 'helm-projectile)
 (projectile-global-mode)
 (setq projectile-completion-system 'helm)
 (helm-projectile-on)
@@ -1675,9 +1672,6 @@ BEG and END (region to sort)."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (global-set-key (kbd "C-c C-f") 'helm-find-files)
 (setq projectile-enable-caching t)
-(define-key projectile-mode-map (kbd "s-p") 'projectile-command-map)
-(define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1829,18 +1823,18 @@ kill ring."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                  Irony
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(add-hook 'c++-mode-hook 'irony-mode)
-(add-hook 'c-mode-hook 'irony-mode)
+;;(add-hook 'c++-mode-hook 'irony-mode)
+;;(add-hook 'c-mode-hook 'irony-mode)
 
 ;; replace the `completion-at-point' and `complete-symbol' bindings in
 ;; irony-mode's buffers by irony-mode's function
-(defun my-irony-mode-hook ()
-  (define-key irony-mode-map [remap completion-at-point] 'irony-completion-at-point-async)
-  (define-key irony-mode-map [remap complete-symbol] 'irony-completion-at-point-async))
-
-(add-hook 'irony-mode-hook 'my-irony-mode-hook)
-(add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
-(eval-after-load 'flycheck '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
+;;(defun my-irony-mode-hook ()
+;;  (define-key irony-mode-map [remap completion-at-point] 'irony-completion-at-point-async)
+;;  (define-key irony-mode-map [remap complete-symbol] 'irony-completion-at-point-async))
+;;
+;;(add-hook 'irony-mode-hook 'my-irony-mode-hook)
+;;(add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
+;;(eval-after-load 'flycheck '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                  Flyspell mode configuration
@@ -1859,3 +1853,4 @@ kill ring."
 (global-ethan-wspace-mode 1)
 (setq mode-require-final-newline nil) ;; disable this mode since the ethan-wspace takes care of it
 (require 'tramp) ;; just to fix issue
+(setq tramp-default-method "plink")
