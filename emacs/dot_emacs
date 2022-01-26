@@ -1,4 +1,4 @@
-(custom-set-variables
+(custom-set-variables 
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
@@ -37,7 +37,7 @@
  '(isearch-lazy-highlight t)
  '(p4-global-key-prefix [24 241])
  '(package-selected-packages
-   '(rust-mode tramp glsl-mode java-snippets java-imports markdown-mode yafolding yaml-mode flymake-json magit helm-descbinds logview helm-flx helm-fuzzier helm-flyspell flycheck-irony helm-company company-irony irony company-c-headers helm-gtags ethan-wspace smartscan powerline helm-mt multi-term popup auto-complete jedi helm-projectile helm fish-mode virtualenv highlight-indent-guides smart-operator cython-mode nose pylint flycheck python-mode visual-ascii-mode p4 zenburn-theme w32-browser undo-tree spinner spacegray-theme solarized-theme smex seq register-list openwith omnisharp occur-x nsis-mode monokai-theme moe-theme mediawiki let-alist json-mode js2-mode iedit fold-dwim flymake-cursor flx-ido flex-isearch dired-filter dired-efap diminish diff-hl cygwin-mount company browse-kill-ring anything-complete anything ack-menu))
+   '(company-jedi jedi-core jedi anaconda-mode flycheck-mypy xcscope rust-mode tramp glsl-mode java-snippets java-imports markdown-mode yafolding yaml-mode flymake-json magit helm-descbinds logview helm-flx helm-fuzzier helm-flyspell flycheck-irony helm-company company-irony irony company-c-headers helm-gtags ethan-wspace smartscan powerline helm-mt multi-term popup auto-complete helm-projectile helm fish-mode virtualenv highlight-indent-guides smart-operator cython-mode nose pylint flycheck python-mode visual-ascii-mode p4 zenburn-theme w32-browser undo-tree spinner spacegray-theme solarized-theme smex seq register-list openwith omnisharp occur-x nsis-mode monokai-theme moe-theme mediawiki let-alist json-mode js2-mode iedit fold-dwim flymake-cursor flx-ido flex-isearch dired-filter dired-efap diminish diff-hl cygwin-mount company browse-kill-ring anything-complete anything ack-menu))
  '(send-mail-function 'smtpmail-send-it)
  '(show-paren-mode t)
  '(smtpmail-smtp-server "smtp.gmail.com.")
@@ -151,6 +151,22 @@
 
 (eval-after-load "python-mode"
   '(define-key python-mode-map (kbd "C-j") nil))
+
+(global-flycheck-mode)
+(add-hook 'python-mode-hook
+          (lambda ()
+            (anaconda-mode)
+            (anaconda-eldoc-mode)
+            (importmagic-mode)
+            (local-set-key (kbd "C-x C-d") 'anaconda-mode-show-doc)
+            (local-set-key (kbd "C-x C-w") 'anaconda-mode-find-definitions)
+            (add-hook 'before-save-hook 'pyimport-remove-unused)
+            (add-hook 'before-save-hook 'importmagic-fix-imports)
+            (add-hook 'before-save-hook 'pyimpsort-buffer)
+            (add-hook 'before-save-hook 'blacken-buffer)
+            (set (make-local-variable 'compile-command)
+                 (concat "python3 " (buffer-name))))
+          )
 
 ;; Keybindings
 ;;(define-key python-mode-map (kbd "RET") 'newline-and-indent)
@@ -536,7 +552,7 @@ otherwise raises an error."
   (while (search-forward "\n" nil t) (replace-match "\r\n")))
 
 
-(setq info-buffers '("*cscope*" "*Occur*" "*grep*" "*etags-select*" "*Output*" "*vc-diff*" "*vc-change-log*" "*Register List*" "* OmniSharp : Usages *" "*Diff*" "*Org Agenda*"))
+(setq info-buffers '("*Anaconda*" "*cscope*" "*Occur*" "*grep*" "*etags-select*" "*Output*" "*vc-diff*" "*vc-change-log*" "*Register List*" "* OmniSharp : Usages *" "*Diff*" "*Org Agenda*"))
 
 (defun kill-all-buffers ()
   (interactive)
@@ -971,6 +987,7 @@ ref `bounds-of-thing-at-point'."
 (define-key global-map (kbd "<f5>") 'redraw-display)
 
 (define-key global-map (kbd "<f6>") 'beautify-json)
+
 
 (require 'col-highlight)
 
@@ -1656,7 +1673,8 @@ BEG and END (region to sort)."
 (global-set-key (kbd "C-x C-n") 'helm-swoop)
 (ido-mode -1)
 
-(require 'helm-projectile)
+(require 'helm-projectile
+)
 (projectile-global-mode)
 (setq projectile-completion-system 'helm)
 (helm-projectile-on)
@@ -1671,7 +1689,7 @@ BEG and END (region to sort)."
 ;;                  Projectile
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (global-set-key (kbd "C-c C-f") 'helm-find-files)
-(setq projectile-enable-caching t)
+setq projectile-enable-caching t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1812,13 +1830,13 @@ kill ring."
 ;;                  Company
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;(eval-after-load 'company '(add-to-list 'company-backends 'company-semantic))
-(global-company-mode '(not python-mode))
+;;(global-company-mode '(not python-mode))
 (add-hook 'after-init-hook 'global-company-mode) ;; Enable company for all buffers
 (eval-after-load 'company '(add-to-list 'company-backends 'company-irony))
 
 (define-key company-active-map (kbd "C-n") 'company-select-next-or-abort)
 (define-key company-active-map (kbd "C-p") 'company-select-previous-or-abort)
-(setq company-global-modes '(not python-mode))
+;;(setq company-global-modes '(not python-mode))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                  Irony
@@ -1854,3 +1872,15 @@ kill ring."
 (setq mode-require-final-newline nil) ;; disable this mode since the ethan-wspace takes care of it
 (require 'tramp) ;; just to fix issue
 (setq tramp-default-method "plink")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  python anaconda
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(require 'anaconda-mode)
+;; anaconda-mode-show-doc
+;; anaconda-mode-find-definitions
+
+(use-package company-jedi
+  :ensure t
+  :config
+  (add-to-list 'company-backends 'company-jedi))
