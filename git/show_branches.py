@@ -4,6 +4,7 @@ from sys import argv
 from prettytable import PrettyTable
 from subprocess import check_output
 import os
+import sys
 
 def format_table(table):
     table.field_names = ["branch", "description"]
@@ -11,7 +12,6 @@ def format_table(table):
     table.align["description"] = "l"
 
 def show_branches(prefix):
-
     table = PrettyTable()
     format_table(table)
     G = "\033[0;32;40m" # GREEN
